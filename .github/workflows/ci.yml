@@ -2,7 +2,9 @@ name: Go CI/CD
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "staging", "uat" ]
+  pull_request:
+    branches: [ "main", "staging", "uat" ]
 
 jobs:
   build-and-deploy:
