@@ -1,0 +1,45 @@
+name: Go CI/CD
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted # รันบนเครื่อง Server ของเราเอง
+
+    steps:
+      # 1. ดึง โค้ดล่าสุด
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. ติดตั้ง Go และ Test โค้ด
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Run Tests
+        run: go test -v ./...
+
+      # 3. Build Docker Image ตัวใหม่
+      - name: Build Docker Image
+        run: docker build -t golang-api:latest .
+
+      # 4. หยุด Container เก่า (ถ้ามี) และรัน Container ใหม่ขึ้นมาแทนที่
+      - name: Deploy Docker Container
+        run: |
+          # ลบ Container เก่าออกถ้ากำลังรันอยู่ (เพื่อไม่ให้ Port ชนกัน)
+          docker stop golang-api-container || true
+          docker rm golang-api-container || true
+
+          # รัน Container ตัวใหม่ขึ้นมาที่ Port 8080
+          docker run -d \
+            --name golang-api-container \
+            --restart always \
+            -p 8080:8080 \
+            golang-api:latest
+
+      # 5. ลบ Image เก่าๆ ที่ไม่ได้ใช้แล้ว เพื่อประหยัดพื้นที่ดิสก์ Server
+      - name: Clean up old Docker Images
+        run: docker image prune -f
